@@ -14,20 +14,30 @@ let activeUsers: any[] = [];
 
 io.on('connection', (socket) => {
 
-  socket.on('join', (newUserId: number) => {
-    const userExist = activeUsers.some(({ userId }) => userId === newUserId)
+  socket.on('join', (newUserID: number) => {
+    const userExist = activeUsers.some(({ userID }) => userID === newUserID)
     if (!userExist) {
       activeUsers.push({
-        userId: newUserId,
-        socketId: socket.id
+        userID: newUserID,
+        socketID: socket.id
       })
     }
-    io.emit('activeUsers', activeUsers)
+    io.emit('active-users', activeUsers)
   })
 
   socket.on('disconnect', () => {
-    activeUsers = activeUsers.filter(({ socketId }) => socketId !== socket.id)
-    io.emit('activeUsers', activeUsers)
+    activeUsers = activeUsers.filter(({ socketID }) => socketID !== socket.id)
+    io.emit('active-users', activeUsers)
   })
 
+  socket.on("send-message", (data) => {
+    const { linkedUserID } = data;
+    const user = activeUsers.find((user) => user.userID === linkedUserID);
+    if (user) io.to(user.socketID).emit("receive-message", data);
+  });
+  socket.on("delete-message", (data) => {
+    const { messageId, linkedUserID } = data;
+    const user = activeUsers.find((user) => user.userID === linkedUserID);
+    if (user) io.to(user.socketID).emit("after-message-deletion", messageId);
+  });
 })
